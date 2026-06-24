@@ -1,0 +1,24 @@
+{
+  "name": "Unity.StructEntropy.CodeGen",
+  "references": [
+    "Unity.CompilationPipeline.Common"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true, 
+  "precompiledReferences": [
+    "Unity.CompilationPipeline.Common.ILPostProcessing.dll",
+    "Unity.CompilationPipeline.Common.dll",
+    "Mono.Cecil.dll",
+    "Mono.Cecil.Mdb.dll",
+    "Mono.Cecil.Rocks.dll",
+    "Mono.Cecil.Pdb.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

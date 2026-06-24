@@ -1,0 +1,10 @@
+{
+  "name": "struct-entropy",
+  "displayName": "Struct Entropy",
+  "version": "0.1.0",
+  "unity": "6000.3",
+  "description": "A data obfuscation anti-cheat for Unity DOTS",
+  "author": {
+    "name": "Ryan Zmuda"
+  }
+}

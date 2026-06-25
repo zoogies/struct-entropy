@@ -1,0 +1,21 @@
+{
+    "structEntropyEnabled": true,
+    "structEntropySeed": 0,
+    "structEntropyFieldRelocationProbability": 1.0,
+    "structEntropyVerboseLogging": false,
+    "benchmarkLoggingEnabled": false,
+    "cfgGenerationEnabled": false,
+    "cfgMode": 0,
+    "cfgTiming": 0,
+    "cgGenerationEnabled": false,
+    "cgTiming": 0,
+    "ilDumpEnabled": false,
+    "ilDumpPath": "Logs/IL_Output",
+    "ilDumpTiming": 0,
+    "structEntropyGraphExportEnabled": false,
+    "targetAssemblies": [
+        "Assembly-CSharp"
+    ],
+    "structEntropyAssemblyIncludePrefixes": [],
+    "structEntropyAssemblyExcludePrefixes": []
+}

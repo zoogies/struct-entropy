@@ -1,5 +1,6 @@
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -184,6 +185,12 @@ public sealed class GraphMLWriter
 
         var graphml = new XElement(ns + "graphml");
 
+        graphml.Add(MakeNamedKey(ns, "nodeLabel", "node", "label", "string"));
+        graphml.Add(MakeNamedKey(ns, "nodeColor", "node", "color", "string"));
+        graphml.Add(MakeKey(ns, "size", "node", "double"));
+        graphml.Add(MakeKey(ns, "x", "node", "double"));
+        graphml.Add(MakeKey(ns, "y", "node", "double"));
+
         graphml.Add(new XElement(ns + "key",
             new XAttribute("id", "nodeKind"),
             new XAttribute("for", "node"),
@@ -250,31 +257,59 @@ public sealed class GraphMLWriter
             new XAttribute("attr.name", "accessAssemblies"),
             new XAttribute("attr.type", "string")));
 
+        graphml.Add(MakeNamedKey(ns, "edgeLabel", "edge", "label", "string"));
+        graphml.Add(MakeKey(ns, "weight", "edge", "double"));
+        graphml.Add(MakeNamedKey(ns, "edgeColor", "edge", "color", "string"));
+        graphml.Add(MakeKey(ns, "approvedCategory", "edge", "string"));
+        graphml.Add(MakeKey(ns, "relocationStatus", "edge", "string"));
+
         var graph = new XElement(ns + "graph",
             new XAttribute("id", "StructEntropyRelocations"),
             new XAttribute("edgedefault", "directed"));
 
-        foreach (var field in opportunities
-                     .Select(o => o.SourceFieldFullName)
-                     .Distinct()
-                     .OrderBy(x => x, System.StringComparer.Ordinal))
+        var fields = opportunities
+            .Select(o => o.SourceFieldFullName)
+            .Distinct()
+            .OrderBy(x => x, System.StringComparer.Ordinal)
+            .ToList();
+
+        var components = opportunities
+            .Select(o => o.TargetComponentFullName)
+            .Distinct()
+            .OrderBy(x => x, System.StringComparer.Ordinal)
+            .ToList();
+
+        for (int i = 0; i < fields.Count; i++)
         {
+            string field = fields[i];
+            string label = ShortFieldName(field);
+
             graph.Add(new XElement(ns + "node",
                 new XAttribute("id", BuildNodeId("field", field)),
+                Data(ns, "nodeLabel", label),
+                Data(ns, "nodeColor", "#d6604d"),
+                Data(ns, "size", "18"),
+                Data(ns, "x", "-400"),
+                Data(ns, "y", GraphLayoutY(i, fields.Count)),
                 new XElement(ns + "data", new XAttribute("key", "nodeKind"), "field"),
-                new XElement(ns + "data", new XAttribute("key", "displayName"), ShortFieldName(field)),
+                new XElement(ns + "data", new XAttribute("key", "displayName"), label),
                 new XElement(ns + "data", new XAttribute("key", "fullName"), field)));
         }
 
-        foreach (var component in opportunities
-                     .Select(o => o.TargetComponentFullName)
-                     .Distinct()
-                     .OrderBy(x => x, System.StringComparer.Ordinal))
+        for (int i = 0; i < components.Count; i++)
         {
+            string component = components[i];
+            string label = ShortTypeName(component);
+
             graph.Add(new XElement(ns + "node",
                 new XAttribute("id", BuildNodeId("component", component)),
+                Data(ns, "nodeLabel", label),
+                Data(ns, "nodeColor", "#4393c3"),
+                Data(ns, "size", "22"),
+                Data(ns, "x", "400"),
+                Data(ns, "y", GraphLayoutY(i, components.Count)),
                 new XElement(ns + "data", new XAttribute("key", "nodeKind"), "component"),
-                new XElement(ns + "data", new XAttribute("key", "displayName"), ShortTypeName(component)),
+                new XElement(ns + "data", new XAttribute("key", "displayName"), label),
                 new XElement(ns + "data", new XAttribute("key", "fullName"), component)));
         }
 
@@ -283,10 +318,17 @@ public sealed class GraphMLWriter
                      .OrderBy(o => o.SourceFieldFullName, System.StringComparer.Ordinal)
                      .ThenBy(o => o.TargetComponentFullName, System.StringComparer.Ordinal))
         {
+            string edgeLabel = EdgeLabel(edge);
+
             graph.Add(new XElement(ns + "edge",
                 new XAttribute("id", "e" + edgeId++),
                 new XAttribute("source", BuildNodeId("field", edge.SourceFieldFullName)),
                 new XAttribute("target", BuildNodeId("component", edge.TargetComponentFullName)),
+                Data(ns, "edgeLabel", edgeLabel),
+                Data(ns, "weight", edge.SemanticAllowed && edge.RewriteSupportedNow ? "4" : "1.5"),
+                Data(ns, "edgeColor", EdgeColor(edge)),
+                Data(ns, "approvedCategory", edge.SemanticAllowed && edge.RewriteSupportedNow ? "approved" : "blocked"),
+                Data(ns, "relocationStatus", RelocationStatus(edge)),
                 new XElement(ns + "data", new XAttribute("key", "semanticAllowed"), edge.SemanticAllowed.ToString().ToLowerInvariant()),
                 new XElement(ns + "data", new XAttribute("key", "rewriteSupportedNow"), edge.RewriteSupportedNow.ToString().ToLowerInvariant()),
                 new XElement(ns + "data", new XAttribute("key", "requiredCapabilities"),
@@ -312,6 +354,39 @@ public sealed class GraphMLWriter
         {
             return false;
         }
+    }
+
+    private static string GraphLayoutY(int index, int count)
+    {
+        double centered = index - ((count - 1) / 2.0);
+        return (centered * 90.0).ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private static string EdgeLabel(RelocationOpportunity edge)
+    {
+        if (edge.SemanticAllowed && edge.RewriteSupportedNow)
+            return "allowed";
+        if (edge.SemanticAllowed)
+            return "rewrite blocked";
+        return "semantic blocked";
+    }
+
+    private static string RelocationStatus(RelocationOpportunity edge)
+    {
+        if (edge.SemanticAllowed && edge.RewriteSupportedNow)
+            return "approved";
+        if (edge.SemanticAllowed)
+            return "rewrite_blocked";
+        return "semantic_blocked";
+    }
+
+    private static string EdgeColor(RelocationOpportunity edge)
+    {
+        if (edge.SemanticAllowed && edge.RewriteSupportedNow)
+            return "#1a9850";
+        if (edge.SemanticAllowed)
+            return "#fdae61";
+        return "#d73027";
     }
 
     private static string BuildNodeId(string prefix, string value)
@@ -348,10 +423,15 @@ public sealed class GraphMLWriter
 
     private static XElement MakeKey(XNamespace ns, string id, string forTarget, string attrType)
     {
+        return MakeNamedKey(ns, id, forTarget, id, attrType);
+    }
+
+    private static XElement MakeNamedKey(XNamespace ns, string id, string forTarget, string attrName, string attrType)
+    {
         return new XElement(ns + "key",
-            new XAttribute("id",        id),
-            new XAttribute("for",       forTarget),
-            new XAttribute("attr.name", id),
+            new XAttribute("id", id),
+            new XAttribute("for", forTarget),
+            new XAttribute("attr.name", attrName),
             new XAttribute("attr.type", attrType));
     }
 

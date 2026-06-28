@@ -442,6 +442,16 @@ public static partial class StructEntropyRewriter
                 continue;
             }
 
+            // ManagedRefRoForEachRewriter: managed (non-Burst) SystemAPI.Query<RefRO<T>>()
+            // fallback copies that use Unity.Entities.RefRO<T> rather than the Burst
+            // UncheckedRefRO enumerator handled by ApplyInlineForEach above.
+            int sMref = ApplyManagedRefRoForEach(module, method, reloc);
+            if (sMref > 0)
+            {
+                total += sMref;
+                continue;
+            }
+
             // GeneralFieldRedirectRewriter: value locals where the peer type is already in scope.
             int s3 = ApplyGeneralFieldRedirect(module, method, reloc, ecbMerges);
             total += s3;

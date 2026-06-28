@@ -34,6 +34,7 @@ namespace StructEntropy.Editor
                 config.ilDumpEnabled = ParseBool(json, "ilDumpEnabled", config.ilDumpEnabled);
                 config.ilDumpPath = ParseString(json, "ilDumpPath", config.ilDumpPath);
                 config.structEntropyGraphExportEnabled = ParseBool(json, "structEntropyGraphExportEnabled", config.structEntropyGraphExportEnabled);
+                config.structEntropyVerboseLogging = ParseBool(json, "structEntropyVerboseLogging", config.structEntropyVerboseLogging);
                 config.structEntropySeed = ParseInt(json, "structEntropySeed", config.structEntropySeed);
                 config.structEntropyFieldRelocationProbability = Clamp01(ParseFloat(
                     json,

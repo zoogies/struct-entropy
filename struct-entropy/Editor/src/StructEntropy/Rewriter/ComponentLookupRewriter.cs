@@ -76,28 +76,24 @@ public static partial class StructEntropyRewriter
     {
         if (peerLookupField == null) return;
 
+        int injected = 0;
         foreach (var type in EnumerateAllTypes(module))
         {
             foreach (var method in type.Methods)
             {
                 if (!method.HasBody) continue;
-                if (method.Body.Instructions.Any(i =>
-                        i.OpCode.Code == Code.Stfld &&
-                        i.Operand is FieldReference existingFr &&
-                        existingFr.Resolve() == peerLookupField))
-                    return;
 
                 var instrs = method.Body.Instructions;
-                for (int i = 0; i < instrs.Count; i++)
+                foreach (var stfld in instrs.ToList())
                 {
-                    var stfld = instrs[i];
                     if (stfld.OpCode.Code != Code.Stfld) continue;
                     if (stfld.Operand is not FieldReference fr || fr.Resolve() != srcLookupField) continue;
+                    if (HasNearbyPeerLookupStore(stfld, peerLookupField)) continue;
 
                     // Find the GetComponentLookup<SourceType> call in preceding ~12 instructions
                     Instruction getCall = null;
-                    int getIdx = -1;
-                    for (int j = Math.Max(0, i - 12); j < i; j++)
+                    int getIdx = instrs.IndexOf(stfld);
+                    for (int j = Math.Max(0, getIdx - 12); j < getIdx; j++)
                     {
                         var c = instrs[j];
                         if ((c.OpCode.Code == Code.Call || c.OpCode.Code == Code.Callvirt) &&
@@ -105,17 +101,17 @@ public static partial class StructEntropyRewriter
                             gim.Name == "GetComponentLookup" &&
                             gim.GenericArguments.Count == 1 &&
                             TypeRefFullNameEquals(gim.GenericArguments[0], sourceType.FullName))
-                        { getCall = c; getIdx = j; break; }
+                        { getCall = c; break; }
                     }
                     if (getCall == null) continue;
 
                     // Clone the complete sequence that provides all stfld arguments.
                     // stfld pops 2 items (instance ref + value), so walk backward from stfldIdx
                     // accumulating enough push coverage, just like PatchGeneratedExecute does.
-                    int seqStart = i;
+                    int seqStart = getIdx;
                     {
                         int needed2 = GetPopCount(stfld); // 2 for stfld (instance + value)
-                        for (int j2 = i - 1; j2 >= 0 && needed2 > 0; j2--)
+                        for (int j2 = getIdx - 1; j2 >= 0 && needed2 > 0; j2--)
                         {
                             seqStart = j2;
                             needed2 -= GetPushCount(instrs[j2]);
@@ -129,7 +125,7 @@ public static partial class StructEntropyRewriter
                     var peerLookupCaches = new Dictionary<FieldDefinition, FieldDefinition>();
                     var cloned = new List<Instruction>();
                     bool ok = true;
-                    for (int k = seqStart; k < i; k++)
+                    for (int k = seqStart; k < getIdx; k++)
                     {
                         var orig = instrs[k];
                         Instruction c2;
@@ -167,11 +163,29 @@ public static partial class StructEntropyRewriter
                     var insertAfter = stfld;
                     foreach (var ij in cloned) { il.InsertAfter(insertAfter, ij); insertAfter = ij; }
                     StructEntropyLogger.Log($"[SER]   Injected lookup init for {targetType.Name} in {type.Name}.{method.Name}");
-                    return;
+                    injected++;
                 }
+
+                if (injected > 0)
+                    method.Body.OptimizeMacros();
             }
         }
-        StructEntropyLogger.Log($"[SER] WARNING: could not find GetComponentLookup<{sourceType.Name}> assignment to clone");
+        if (injected == 0)
+            StructEntropyLogger.Log($"[SER] WARNING: could not find GetComponentLookup<{sourceType.Name}> assignment to clone");
+    }
+
+    private static bool HasNearbyPeerLookupStore(Instruction sourceLookupStore, FieldDefinition peerLookupField)
+    {
+        int scanned = 0;
+        for (var scan = sourceLookupStore.Next; scan != null && scanned++ < 24; scan = scan.Next)
+        {
+            if (scan.OpCode.Code == Code.Stfld &&
+                scan.Operand is FieldReference fr &&
+                fr.Resolve() == peerLookupField)
+                return true;
+        }
+
+        return false;
     }
 
     // Finds the ComponentLookup<SourceType>.get_Item call, injects peer get_Item + stloc after it.

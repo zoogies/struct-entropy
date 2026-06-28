@@ -141,8 +141,15 @@ public static partial class StructEntropyRewriter
                 fr.Resolve() == lookupField))
             return true;
 
-        if (!TryBuildSystemStateGetComponentLookupSequence(module, method, targetType, out var getLookupPrefix, out var getLookupRef) &&
-            !TryBuildSystemApiGetComponentLookupSequence(module, targetType, out getLookupPrefix, out getLookupRef))
+        List<Instruction> getLookupPrefix;
+        MethodReference getLookupRef;
+        bool isGeneratedOnUpdate = method.Name.StartsWith("__OnUpdate_", StringComparison.Ordinal);
+        bool foundLookupSequence = isGeneratedOnUpdate
+            ? TryBuildSystemStateGetComponentLookupSequence(module, method, targetType, out getLookupPrefix, out getLookupRef) ||
+              TryBuildSystemApiGetComponentLookupSequence(module, targetType, out getLookupPrefix, out getLookupRef)
+            : TryBuildSystemApiGetComponentLookupSequence(module, targetType, out getLookupPrefix, out getLookupRef) ||
+              TryBuildSystemStateGetComponentLookupSequence(module, method, targetType, out getLookupPrefix, out getLookupRef);
+        if (!foundLookupSequence)
             return false;
 
         var first = method.Body.Instructions.FirstOrDefault();

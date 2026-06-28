@@ -155,6 +155,20 @@ internal static class AccessPatternClassifier
                     return AccessKind.IfeSingleComponent;
             }
 
+            // Managed (non-Burst) fallback IFE reads use Unity.Entities.RefRO<T>.get_ValueRO()
+            // instead of the Burst UncheckedRefRO enumerator. Newer Entities source-gen emits
+            // these managed copies of SystemAPI.Query<RefRO<T>>() foreach loops alongside the
+            // Burst __OnUpdate twin. Classify them the same as their Burst twin (IfeSingleComponent)
+            // so the IfePeerInjection capability gates them; ManagedRefRoForEachRewriter performs
+            // the actual redirect (ComponentLookup[entity] or entity-array lookup).
+            if (mr.Name == "get_ValueRO" &&
+                mr.DeclaringType is GenericInstanceType refRoGit &&
+                refRoGit.ElementType.Name.StartsWith("RefRO", StringComparison.Ordinal) &&
+                refRoGit.GenericArguments.Count == 1 &&
+                (refRoGit.GenericArguments[0].Resolve()?.FullName == sourceComponentFullName ||
+                 refRoGit.GenericArguments[0].FullName == sourceComponentFullName))
+                return AccessKind.IfeSingleComponent;
+
             if (mr.Name == "get_Item" &&
                 mr.DeclaringType is GenericInstanceType lookupGit &&
                 lookupGit.ElementType.FullName.StartsWith("Unity.Entities.ComponentLookup"))

@@ -1,6 +1,6 @@
 # Struct Entropy
 
-<!-- [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) -->
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A data obfuscation anti-cheat for Unity DOTS, presented at DEF CON 34.
 
@@ -98,3 +98,5 @@ Here's the planner output graph for Arkanoid (note that there is another valid r
 <p align="center">
 	<img src=".github/media/planner.png"/>
 </p>
+
+There is an AOB Cheat Engine Lua cheat script included in `cheats/DOTS-Arkanoid` which works on the unmodified game, but fails to work on the instrumented game. This is a good demo for how this can work on real project, and if you inspect the Assemblies in dnSpy, you will be able to observe the relocations between types.

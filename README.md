@@ -81,7 +81,7 @@ The options in this panel are mostly here for development and debugging purposes
 
 ## DOTS Arkanoid
 
-The DOTS-Arkanoid Unity project (EugenyN, MIT License) located in `samples/DOTS-Arkanoid` has been tested with the pass, and is a good starting point. If you clone this repository and open the sample in Unity, it will be pre-configured with the pass already installed. Have fun!
+The [DOTS-Arkanoid](https://github.com/EugenyN/DOTS-Arkanoid) Unity project (EugenyN, MIT License) located in `samples/DOTS-Arkanoid` has been tested with the pass, and is a good starting point. If you clone this repository and open the sample in Unity, it will be pre-configured with the pass already installed. Have fun!
 
 If you compile Arkanoid with the following settings, you will see the following transformation:
 

@@ -8,6 +8,8 @@ A data obfuscation anti-cheat for Unity DOTS, presented at DEF CON 34.
 
 Struct Entropy is a Unity 6 DOTS ILPP pass that relocates fields between co-lifetimed `IComponentData` structs. This effectively obfuscates interesting game data, and breaks AOB and stable struct offset assumptions.
 
+More information will be added here, including the original slides, after DEF CON 34.
+
 ## Installing
 
 1. Clone this repository locally.
@@ -74,7 +76,7 @@ This option allows you to dump versions of the CIL to disk for introspection (re
 ### Cache Management
 
 <p align="center">
-	<img src=".github/media/CACHE.png"/>
+	<img src=".github/media/Cache.png"/>
 </p>
 
 The options in this panel are mostly here for development and debugging purposes. DOTS likes to do a lot of entity disk baking and caching, so many of these options are the go-to for "why the hell is my shit not working". I reccomend trying options top-to-bottom in this panel. The last option requires an editor restart, but only rarely have I needed this.  
